@@ -1,7 +1,7 @@
 from typing import List, Tuple
 import stanza
 
-stanza.download('en')
+#stanza.download('en')
 nlp = stanza.Pipeline('en')
 
 EntityList = List[Tuple[str, str]]
@@ -14,7 +14,7 @@ def extract_entities(text) -> EntityList:
     return [(ent.type, ent.text) for ent in doc.entities]
 
 
-def entity_overlap(ents1: EntityList, ents2: EntityList):
+def entity_overlap(ents1: EntityList, ents2: EntityList) -> EntityList:
     """
         Returns overlapping entities for two entity lists
     """
