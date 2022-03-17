@@ -36,6 +36,10 @@ class CorrectionModel:
         learning_rate=1e-5,
         batch_size=32 # For now hard-coded batch size of 1
     ):
+        """
+            Fine-tunes a correction model for a given tokenized dataset 
+            which contains pairs of positive and negative examples
+        """
         optim = Adam(
             self.model.parameters(), 
             lr=learning_rate
@@ -66,6 +70,12 @@ class CorrectionModel:
         self.model.eval()
 
     def correct_summary(self, source, generated_summary):
+        """
+            Given a source doc and generated summary,
+            generate candidate summaries and rank the candidates.
+
+            Return the candidate summaries ranked according to faithulness
+        """
         
         src_doc = nlp(source)
         src_doc.build_ents()
@@ -90,7 +100,7 @@ class CorrectionModel:
         loss = outputs.loss
         logits = outputs.logits
 
-        # TODO: choose summary with highest likelihood of being faithful
+        # TODO: order summary according to their likelihood of being faithful
 
         return summaries, loss, logits
 
