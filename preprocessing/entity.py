@@ -13,7 +13,6 @@ def extract_entities(text) -> EntityList:
     doc = nlp(text)
     return [(ent.type, ent.text) for ent in doc.entities]
 
-
 def entity_overlap(ents1: EntityList, ents2: EntityList) -> EntityList:
     """
         Returns overlapping entities for two entity lists
