@@ -29,8 +29,10 @@ def tokenize_data(tokenizer, data):
         positive = doc["positive_examples"][0]
         for negative in doc["negative_examples"]:
             tokenized.append(tokenizer(
-                [positive, negative], 
+                [positive, negative],
+                text_pair=[doc["source_text"]] * 2, 
                 return_tensors="pt", 
+                truncation='only_second',
                 padding=True
             ))
 

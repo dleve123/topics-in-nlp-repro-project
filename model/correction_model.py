@@ -1,7 +1,7 @@
-from typing import List, Tuple
+from typing import List
 from transformers import BartTokenizer, BartForSequenceClassification
 import torch
-from torch.utils.data import DataLoader
+from torch import nn
 from torch.optim import Adam
 import time
 from preprocessing.make_entity_perturbations import make_perturbations
@@ -93,6 +93,8 @@ class CorrectionModel:
         summaries = [generated_summary] + candidate_summaries
         inputs = self.tokenizer(
             summaries, 
+            text_pair=[src_doc._text] * len(summaries),
+            truncation='only_second',
             return_tensors="pt", 
             padding=True
         )
