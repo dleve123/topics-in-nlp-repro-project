@@ -15,7 +15,7 @@ nlp = stanza.Pipeline('en')
 """
 For our contrast candidate selection model, we use
 a pretrained BART base model. We add a linear
-layer over the max pooled embedding, and the classification 
+layer over the max pooled embedding, and the classification
 model is expected to output a label between ["FAITHFUL", "HALLUCINATED"].
 """
 
@@ -32,16 +32,16 @@ class CorrectionModel:
     def train(
         self,
         tokenized_dataset: List,
-        epochs=3, 
+        epochs=3,
         learning_rate=1e-5,
         batch_size=32 # For now hard-coded batch size of 1
     ):
         """
-            Fine-tunes a correction model for a given tokenized dataset 
+            Fine-tunes a correction model for a given tokenized dataset
             which contains pairs of positive and negative examples
         """
         optim = Adam(
-            self.model.parameters(), 
+            self.model.parameters(),
             lr=learning_rate
         )
 
@@ -57,7 +57,7 @@ class CorrectionModel:
                 labels = torch.tensor([0, 1]).to(self.device)
                 outputs = self.model(
                     input_ids,
-                    attention_mask=attention_mask, 
+                    attention_mask=attention_mask,
                     labels=labels
                 )
                 loss = outputs[0]
@@ -74,9 +74,9 @@ class CorrectionModel:
             Given a source doc and generated summary,
             generate candidate summaries and rank the candidates.
 
-            Return the candidate summaries ranked according to faithulness
+            Return the candidate summaries ranked according to faithfulness
         """
-        
+
         src_doc = nlp(source)
         src_doc.build_ents()
 
@@ -92,10 +92,10 @@ class CorrectionModel:
         )
         summaries = [generated_summary] + candidate_summaries
         inputs = self.tokenizer(
-            summaries, 
+            summaries,
             text_pair=[src_doc._text] * len(summaries),
             truncation='only_second',
-            return_tensors="pt", 
+            return_tensors="pt",
             padding=True
         )
         outputs = self.model(**inputs)
