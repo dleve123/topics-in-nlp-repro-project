@@ -1,2 +1,4 @@
-data/*
+data/paper
+evaluation/bart_qg
+evaluation/qa_models
 __pycache__
