@@ -8,7 +8,15 @@ on building a correction model.
 
 Python version: 3.9
 
-### Running [FEQA](https://github.com/esdurmus/feqa)
+## Data Preprocessing
+
+For efficiency, we tokenize the datasets in advance of training.
+
+```bash
+$ python bart_tokenize.py data/paper/val.jsonl data/tokenized/val.tokenized.jsonl
+```
+
+## Running [FEQA](https://github.com/esdurmus/feqa)
 See [this notebook](https://colab.research.google.com/drive/1ie9oz20mt6RRm6KsGLM9Mwxn9LQJAWKr?authuser=1#scrollTo=NOP0jqxdKiCZ).
 
 Trained models for question generation and question answering systems are under [this drive](https://drive.google.com/drive/u/1/folders/1O3kjSIhjDULw1RPJZTQ002GK3XNo2Vxl).
