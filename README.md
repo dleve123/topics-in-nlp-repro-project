@@ -16,3 +16,12 @@ Trained models for question generation and question answering systems are under 
 1. Download squad1.0 from Google Drive and place it under evaluation/qa_models directory.
 2. Download checkpoints folder and place it under evaluation/bart_qg directory.
 3. Run `python -m spacy download en_core_web_sm`
+
+## Data Preprocessing
+
+For efficiency, we tokenize the datasets in advance of training.
+
+```bash
+$ python bart_tokenize.py data/paper/val.jsonl data/tokenized/val.tokenized.jsonl
+```
+****
