@@ -1,7 +1,8 @@
-from typing import List
+from typing import List, Optional
 from transformers import BartTokenizer, BartForSequenceClassification
 import torch
-from torch import nn
+from torch.utils.data import DataLoader
+from torch import Tensor, nn
 from torch.optim import Adam
 import time
 from preprocessing.make_entity_perturbations import make_perturbations
@@ -24,17 +25,33 @@ class CorrectionModel:
         self.tokenizer = BartTokenizer.from_pretrained(model_checkpoint)
         self.model = BartForSequenceClassification.from_pretrained(
             model_checkpoint,
-            # label 0: faithful, label 1: hallucinated
             num_labels=2
         )
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    def _create_batches_of_pairs(self, document_examples: Tensor) -> List[Tensor]:
+        """
+        Split a tensor of 1 positive and N negative pairs into
+        a list of N elements, which each element being a Tensor with 2 rows:
+        the first row being the tokenized positive input, the second row being
+        the tokenized negative input.
+        """
+        batches = []
+
+        positive = document_examples[0]
+        negatives = document_examples[1:]
+
+        for negative in negatives:
+            batches.append(torch.vstack((positive, negative)))
+
+        return batches
 
     def train(
         self,
         tokenized_dataset: List,
         epochs=3,
         learning_rate=1e-5,
-        batch_size=32 # For now hard-coded batch size of 1
+        max_num_pairs_per_doc: Optional[int] = None
     ):
         """
             Fine-tunes a correction model for a given tokenized dataset
@@ -46,28 +63,62 @@ class CorrectionModel:
         )
 
         self.model.train()
-        print("Training...")
+
+        cross_entropy_loss_function = nn.CrossEntropyLoss()
+        margin_loss_function = nn.MarginRankingLoss(margin=0)
+
+        # Iterate through training data such that all instances of
+        # of positive/negative pairs for a given document are seen
+        # together. However, randomize the order of documents per epoch.
+        epoch_data_iterator = DataLoader(
+            tokenized_dataset,
+            batch_size=1,
+            shuffle=True
+        )
+
         for epoch in range(epochs):
-            start_time = time.time()
-            epoch_loss = 0
-            for pairs in tqdm(tokenized_dataset):
-                optim.zero_grad()
-                input_ids = pairs['input_ids'].to(self.device)
-                attention_mask = pairs['attention_mask'].to(self.device)
-                labels = torch.tensor([0, 1]).to(self.device)
-                outputs = self.model(
-                    input_ids,
-                    attention_mask=attention_mask,
-                    labels=labels
-                )
-                loss = outputs[0]
-                loss.backward()
-                optim.step()
-                epoch_loss += loss.item()
+            start_time = time.perf_counter()
+            epoch_losses = []
+
+            for document_examples in tqdm(epoch_data_iterator):
+
+                # Remove the batch dim to iterate over number of examples per batch (2)
+                document_examples = document_examples.squeeze(0)
+
+                if max_num_pairs_per_doc and document_examples.size(0) > (max_num_pairs_per_doc + 1):
+                    document_examples = document_examples[:(max_num_pairs_per_doc + 1)]
+
+                for contrastive_pair in self._create_batches_of_pairs(document_examples):
+                    optim.zero_grad()
+
+                    contrastive_pair = contrastive_pair.to(self.device)
+
+                    preds = self.model(contrastive_pair).logits
+                    positive_faithful_pred = preds[0, 1].unsqueeze(0) # should tend towards 1
+                    negative_faithful_pred = preds[1, 1].unsqueeze(0) # should tend towards 0
+
+                    good_then_bad_labels = torch.LongTensor([1, 0]).to(self.device)
+                    ce_loss = cross_entropy_loss_function(preds, good_then_bad_labels)
+
+                    # positive_faithful_pred - negative_faithful_pred should be > 0
+                    margin_target = torch.LongTensor([1]).to(self.device)
+                    margin_loss = margin_loss_function(
+                        positive_faithful_pred,
+                        negative_faithful_pred,
+                        margin_target
+                    )
+
+                    loss = ce_loss + margin_loss
+                    loss.backward()
+
+                    optim.step()
+                    epoch_losses.append(loss.item())
+
             print(f"Epoch {epoch}")
-            print(f"Epoch time {time.time() - start_time}")
-            print(f"Train epoch loss {epoch_loss / (len(tokenized_dataset))}")
-        self.model.eval()
+            print(f"Epoch time {time.perf_counter() - start_time}")
+            print(f"Mean epoch loss over gradient updates {sum(epoch_losses) / len(epoch_losses)}")
+
+        return None
 
     def correct_summary(self, source, generated_summary):
         """
