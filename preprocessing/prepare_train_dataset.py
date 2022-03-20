@@ -2,6 +2,7 @@ import json
 from typing import List
 from tqdm import tqdm
 from transformers import BartTokenizer
+import torch
 
 def load_generated_summaries():
     # TODO: load generated summaries from disk
@@ -22,22 +23,22 @@ def load_valid_examples(loc = "data/paper/train.jsonl") -> List[dict]:
 
     return docs_with_negative_examples
 
-def tokenize_data(tokenizer, data):
+def tokenize_data(tokenizer: BartTokenizer, data: List[dict]) -> List[List[int]]:
     """
         Returns a tensor with pairs of summaries
         [positive example, negative example]
     """
     tokenized = []
-    for doc in data:
+    for doc in tqdm(data):
         positive = doc["positive_examples"][0]
         for negative in doc["negative_examples"]:
             tokenized.append(tokenizer(
                 [positive, negative],
                 text_pair=[doc["source_text"]] * 2,
-                return_tensors="pt",
                 truncation='only_second',
-                padding=True
-            ))
+                padding='max_length',
+                max_length=tokenizer.model_max_length,
+            )['input_ids'])
 
     return tokenized
 
@@ -63,3 +64,18 @@ def tokenize_data_batch(tokenizer: BartTokenizer, data: List[dict]) -> List[List
         )['input_ids'])
 
     return tokenized
+
+
+def tensors_from_jsonl_filepath(data_filepath: str) -> List[torch.LongTensor]:
+    """
+    Returns a list of tensors source from the file at the `data_filepath`
+    provided. Each Tensor represents an "example set". An example set contains the
+    positive and all negative example summaries for a given source document.
+    """
+    examples = []
+
+    with open(data_filepath) as file:
+        for line in file:
+            example = json.loads(line)
+            examples.append(torch.tensor(example, dtype=torch.long))
+    return examples
