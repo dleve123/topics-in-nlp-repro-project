@@ -21,7 +21,12 @@ def load_data(dataset: str, split: str, model_summaries: str):
 
 
 def evaluate(gt_summaries, generated_summaries):
-    (P, R, F), hashname = score(generated_summaries, gt_summaries, lang="en", return_hash=True)
+    (P, R, F), hashname = score(
+        generated_summaries, 
+        gt_summaries,
+        lang="en", 
+        return_hash=True
+    )
     print(f"P={P.mean().item():.6f} R={R.mean().item():.6f} F={F.mean().item():.6f}")
     return F.tolist()
 
@@ -36,11 +41,11 @@ if __name__ == '__main__':
 
     dataset, split = args.dataset_split.split("/")
     gt_sums, gen_sums, sum_ids = load_data(dataset, split, args.model_summaries)
-    print(len(gt_sums), len(gen_sums))
     scores = evaluate(
         gt_sums[:args.subset] if args.subset != 0 else gt_sums, 
         gen_sums[:args.subset] if args.subset != 0 else gen_sums
     )
+    print(f"calculated {len(scores)} scores, saving to storage..")
     store_summary_metrics(
         dataset, 
         args.model_summaries,
