@@ -76,6 +76,7 @@ class FEQA(object):
         qa_masks = []
         tokenized_phrases = []
 
+        print("Tokenizing summaries for q-gen...")
         for id_, summary in enumerate(summaries):
             summary = summary.strip()
             all_masked_phrases = []
@@ -94,6 +95,7 @@ class FEQA(object):
 
         questions = []
         for i in range(0, len(qa_masks), self.batch_size):
+            print(f"Generating questions (batch {i}/{len(qa_masks)})...")
             batch = qa_masks[i:i + self.batch_size]
             hypotheses = self.qg_model.sample(batch, beam=self.beam_size, lenpen=1.0, max_len_b=self.max_length, min_len=1, no_repeat_ngram_size=3)
             questions.extend(hypotheses)
