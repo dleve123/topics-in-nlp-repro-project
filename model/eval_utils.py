@@ -3,9 +3,11 @@ from typing import List, Optional
 import torch
 from tqdm import tqdm
 
+from model.correction_model import CorrectionModel
+
 
 def eval_pair_positive_heigher(
-    model, dset: List[torch.Tensor], max_num_pairs_per_doc: Optional[int] = None
+    correction_model: CorrectionModel, dset: List[torch.Tensor], max_num_pairs_per_doc: Optional[int] = None
 ) -> float:
     """
     Debugging utility to assess how accurate the corrector model is at separating
@@ -13,6 +15,7 @@ def eval_pair_positive_heigher(
 
     Returns fraction of pairs where positive sample has higher faithful prob.
     """
+    model = correction_model.model
     model.eval()
 
     correct_counter = 0
@@ -40,7 +43,7 @@ def eval_pair_positive_heigher(
 
 
 def eval_set_positive_heigher(
-    model, dset: List[torch.Tensor], max_num_pairs_per_doc: Optional[int] = None
+    correction_model, dset: List[torch.Tensor], max_num_pairs_per_doc: Optional[int] = None
 ) -> float:
     """
     Debugging utility to assess how accurate the discrimator model is at separating
@@ -48,6 +51,7 @@ def eval_set_positive_heigher(
 
     Returns fraction of sets where positive sample has higher prob than all negative samples.
     """
+    model = correction_model.model
     model.eval()
 
     correct_counter = 0
