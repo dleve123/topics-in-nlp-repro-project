@@ -1,3 +1,5 @@
+import os
+import pathlib
 from typing import List, Optional
 from transformers import BartTokenizer, BartForSequenceClassification
 import torch
@@ -29,7 +31,7 @@ class CorrectionModel:
         )
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    def _create_batches_of_pairs(self, document_examples: Tensor) -> List[Tensor]:
+    def create_pairs(self, document_examples: Tensor) -> List[Tensor]:
         """
         Split a tensor of 1 positive and N negative pairs into
         a list of N elements, which each element being a Tensor with 2 rows:
@@ -48,39 +50,38 @@ class CorrectionModel:
 
     def train(
         self,
-        tokenized_dataset: List,
-        epochs=3,
-        learning_rate=1e-5,
-        max_num_pairs_per_doc: Optional[int] = None
-    ):
+        model_to_train: BartForSequenceClassification,
+        dset: List,
+        device: torch.cuda.Device,
+        save_path: str,
+        max_num_pairs_per_doc: Optional[int] = None,
+        epochs: int = 3,
+        learning_rate: float = 1e-5,
+        steps_save_interal: int = 200
+    ) -> None:
         """
-            Fine-tunes a correction model for a given tokenized dataset
-            which contains pairs of positive and negative examples
+        Trains `model_to_train`.
         """
-        optim = Adam(
-            self.model.parameters(),
-            lr=learning_rate
-        )
 
         self.model.train()
+
+        optim = Adam(self.model.parameters(),lr=learning_rate)
 
         cross_entropy_loss_function = nn.CrossEntropyLoss()
         margin_loss_function = nn.MarginRankingLoss(margin=0)
 
-        # Iterate through training data such that all instances of
-        # of positive/negative pairs for a given document are seen
-        # together. However, randomize the order of documents per epoch.
-        epoch_data_iterator = DataLoader(
-            tokenized_dataset,
-            batch_size=1,
-            shuffle=True
-        )
+        epoch_data_iterator = DataLoader(dset, batch_size=1, shuffle=True)
 
         for epoch in range(epochs):
             start_time = time.perf_counter()
-            epoch_losses = []
+            epoch_loss = 0
+            epoch_steps_counter = 0
+            total_steps_counter = 0
 
-            for document_examples in tqdm(epoch_data_iterator):
+            epoch_bar = tqdm(epoch_data_iterator)
+
+            for document_examples in epoch_bar:
+                doc_losses = []
 
                 # Remove the batch dim to iterate over number of examples per batch (2)
                 document_examples = document_examples.squeeze(0)
@@ -88,20 +89,19 @@ class CorrectionModel:
                 if max_num_pairs_per_doc and document_examples.size(0) > (max_num_pairs_per_doc + 1):
                     document_examples = document_examples[:(max_num_pairs_per_doc + 1)]
 
-                for contrastive_pair in self._create_batches_of_pairs(document_examples):
+                for contrastive_pair in self.create_pairs(document_examples):
                     optim.zero_grad()
 
-                    contrastive_pair = contrastive_pair.to(self.device)
+                    contrastive_pair = contrastive_pair.to(device)
 
-                    preds = self.model(contrastive_pair).logits
+                    preds = model_to_train(contrastive_pair).logits
                     positive_faithful_pred = preds[0, 1].unsqueeze(0) # should tend towards 1
                     negative_faithful_pred = preds[1, 1].unsqueeze(0) # should tend towards 0
 
-                    good_then_bad_labels = torch.LongTensor([1, 0]).to(self.device)
+                    good_then_bad_labels = torch.LongTensor([1, 0]).to(device)
                     ce_loss = cross_entropy_loss_function(preds, good_then_bad_labels)
 
-                    # positive_faithful_pred - negative_faithful_pred should be > 0
-                    margin_target = torch.LongTensor([1]).to(self.device)
+                    margin_target = torch.LongTensor([1]).to(device) # positive_faithful_pred - negative_faithful_pred should be > 0
                     margin_loss = margin_loss_function(
                         positive_faithful_pred,
                         negative_faithful_pred,
@@ -112,11 +112,33 @@ class CorrectionModel:
                     loss.backward()
 
                     optim.step()
-                    epoch_losses.append(loss.item())
+
+                    loss_item = loss.item()
+                    epoch_loss += loss_item
+                    doc_losses.append(loss_item)
+
+                    epoch_steps_counter += 1
+                    total_steps_counter += 1
+
+                    current_loss = sum(doc_losses) / len(doc_losses)
+                    epoch_bar.set_description(f"Current Loss {current_loss:.3f}")
+
+
+            # save model after every steps_save_interval steps
+            if (total_steps_counter % steps_save_interal) == 0:
+                model_save_dir_path = os.path.join(save_path, f"epoch-{epoch}_totalsteps-{total_steps_counter}")
+                pathlib.Path(model_save_dir_path).mkdir(parents=True, exist_ok=True)
+                model.save_pretrained(model_save_dir_path)
 
             print(f"Epoch {epoch}")
             print(f"Epoch time {time.perf_counter() - start_time}")
-            print(f"Mean epoch loss over gradient updates {sum(epoch_losses) / len(epoch_losses)}")
+            print(f"Train epoch loss {epoch_loss / epoch_steps_counter}")
+
+        print("TRAINING COMPLETE!!!")
+        print("saving one last snapshot")
+        model_save_dir_path = os.path.join(save_path, f"final-epoch-{epoch}_totalsteps-{total_steps_counter}")
+        pathlib.Path(model_save_dir_path).mkdir(parents=True, exist_ok=True)
+        model.save_pretrained(model_save_dir_path)
 
         return None
 
