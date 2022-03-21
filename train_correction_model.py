@@ -23,6 +23,9 @@ if __name__ == "__main__":
         "--learning_rate", type=float, help="training learning rate", default=1e-5
     )
     parser.add_argument(
+        "--warmup", type=float, help="warmup steps as a proportion of training set size", default=0.1
+    )
+    parser.add_argument(
         "--max_num_pairs_per_doc",
         type=int,
         help="Limit of the number of contrastive pairs to train on per doc."

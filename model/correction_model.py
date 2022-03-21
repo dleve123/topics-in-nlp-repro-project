@@ -5,7 +5,7 @@ from transformers import BartTokenizer, BartForSequenceClassification
 import torch
 from torch.utils.data import DataLoader
 from torch import Tensor, nn
-from transformers.optimization import AdamW
+from transformers.optimization import AdamW, get_linear_schedule_with_warmup
 import time
 from preprocessing.make_entity_perturbations import make_perturbations
 import stanza
@@ -55,6 +55,8 @@ class CorrectionModel:
         epochs: int = 3,
         learning_rate: float = 1e-5,
         steps_save_interal: int = 200,
+        warmup=0.1,
+        batch_size=2
     ) -> None:
         """
         Trains CorrectionModel using a CE loss and MarginRankLoss.
@@ -63,17 +65,22 @@ class CorrectionModel:
 
         self.model.train()
         wandb.watch(self.model)
+        epoch_data_iterator = DataLoader(dset, batch_size=1, shuffle=True)
 
         optim = AdamW(
             self.model.parameters(), 
             lr=learning_rate,
             correct_bias=False
         )
+        scheduler = get_linear_schedule_with_warmup(
+            optim,
+            num_warmup_steps=warmup * len(epoch_data_iterator),
+            num_training_steps=len(epoch_data_iterator) * 10 / batch_size
+        )
 
         cross_entropy_loss_function = nn.CrossEntropyLoss()
         margin_loss_function = nn.MarginRankingLoss(margin=0)
 
-        epoch_data_iterator = DataLoader(dset, batch_size=1, shuffle=True)
         total_steps_counter = 0
 
         for epoch in range(epochs):
@@ -119,6 +126,7 @@ class CorrectionModel:
                     loss.backward()
 
                     optim.step()
+                    scheduler.step()
 
                     loss_item = loss.item()
                     epoch_loss += loss_item
@@ -128,6 +136,7 @@ class CorrectionModel:
                             "ce_pair_loss": ce_loss.item(),
                             "margin_pair_loss": margin_loss.item(),
                             "total_pair_loss": loss_item,
+                            "learning_rate": scheduler.get_last_lr()[-1]
                         }
                     )
 
