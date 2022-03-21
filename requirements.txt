@@ -4,7 +4,6 @@ torch==1.11.0
 word2number==1.1
 transformers==4.17.0
 rouge_score==0.0.4
-numpy==1.21.5
 benepar==0.2.0
 fairseq==0.10.2
 nltk==3.7
