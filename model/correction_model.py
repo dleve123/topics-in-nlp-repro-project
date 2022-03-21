@@ -22,7 +22,7 @@ model is expected to output a label between ["FAITHFUL", "HALLUCINATED"].
 
 class CorrectionModel:
     def __init__(self, model_checkpoint="facebook/bart-base"):
-        self.tokenizer = BartTokenizer.from_pretrained(model_checkpoint)
+        self.tokenizer = BartTokenizer.from_pretrained("facebook/bart-base")
         self.model = BartForSequenceClassification.from_pretrained(
             model_checkpoint, num_labels=2
         )
