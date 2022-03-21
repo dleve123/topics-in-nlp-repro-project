@@ -27,6 +27,7 @@ class CorrectionModel:
             model_checkpoint, num_labels=2
         )
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model.to(self.device)
 
     def create_pairs(self, document_examples: Tensor) -> List[Tensor]:
         """
