@@ -134,13 +134,14 @@ class CorrectionModel:
                     {"avg_total_document_loss": sum(doc_losses) / len(doc_losses)}
                 )
 
-            # save model after every steps_save_interval steps
-            if (total_steps_counter % steps_save_interal) == 0:
-                model_save_dir_path = os.path.join(
-                    model_save_path, f"epoch-{epoch}_totalsteps-{total_steps_counter}"
-                )
-                pathlib.Path(model_save_dir_path).mkdir(parents=True, exist_ok=True)
-                self.model.save_pretrained(model_save_dir_path)
+                # save model after every steps_save_interval steps
+                if (total_steps_counter % steps_save_interal) == 0:
+                    print(f'snapshotting model after {total_steps_counter} steps')
+                    model_save_dir_path = os.path.join(
+                        model_save_path, f"epoch-{epoch}_totalsteps-{total_steps_counter}"
+                    )
+                    pathlib.Path(model_save_dir_path).mkdir(parents=True, exist_ok=True)
+                    self.model.save_pretrained(model_save_dir_path)
 
             print(f"Epoch {epoch}")
             print(f"Epoch time {time.perf_counter() - start_time}")
