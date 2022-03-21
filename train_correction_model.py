@@ -1,4 +1,5 @@
 import argparse
+import wandb
 from time import perf_counter
 from model.correction_model import CorrectionModel
 
@@ -35,6 +36,10 @@ if __name__ == "__main__":
         default=200,
     )
     args = parser.parse_args()
+
+    run = wandb.init(project="correction-repro", entity="danton-nlp")
+    config = wandb.config
+    config.update(args)
 
     train_dataset = tensors_from_jsonl_filepath(args.train_data_filepath)
     model = CorrectionModel()
