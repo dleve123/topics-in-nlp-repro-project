@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 import torch
-import tqdm
+from tqdm import tqdm
 
 
 def eval_pair_positive_heigher(
