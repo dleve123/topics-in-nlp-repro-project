@@ -126,6 +126,7 @@ class CorrectionModel:
 
             # save model after every steps_save_interval steps
             if (total_steps_counter % steps_save_interal) == 0:
+                print("Taking model snapshot")
                 model_save_dir_path = os.path.join(
                     model_save_path, f"epoch-{epoch}_totalsteps-{total_steps_counter}"
                 )
