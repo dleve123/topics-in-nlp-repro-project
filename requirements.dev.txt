@@ -1,2 +1,2 @@
-jupyter
-ipython
+jupyter==1.0.0
+ipython==8.1.1
