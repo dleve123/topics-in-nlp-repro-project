@@ -11,9 +11,6 @@ from preprocessing.make_entity_perturbations import make_perturbations
 import stanza
 from tqdm import tqdm
 
-# stanza.download('en')
-nlp = stanza.Pipeline("en")
-
 # From the paper
 """
 For our contrast candidate selection model, we use
@@ -154,6 +151,9 @@ class CorrectionModel:
 
         Return the candidate summaries ranked according to faithfulness
         """
+
+        stanza.download('en')
+        nlp = stanza.Pipeline("en")
 
         src_doc = nlp(source)
         src_doc.build_ents()
