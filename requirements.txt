@@ -9,4 +9,5 @@ benepar==0.2.0
 fairseq==0.10.2
 nltk==3.7
 bert-score==0.3.7
+wandb==0.12.11
 git+https://github.com/factula/sumtool#egg=sumtool

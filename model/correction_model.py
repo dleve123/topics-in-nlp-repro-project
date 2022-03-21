@@ -10,6 +10,7 @@ import time
 from preprocessing.make_entity_perturbations import make_perturbations
 import stanza
 from tqdm import tqdm
+import wandb
 
 # From the paper
 """
@@ -61,6 +62,7 @@ class CorrectionModel:
         """
 
         self.model.train()
+        wandb.watch(self.model)
 
         optim = Adam(self.model.parameters(), lr=learning_rate)
 
@@ -117,24 +119,38 @@ class CorrectionModel:
                     loss_item = loss.item()
                     epoch_loss += loss_item
                     doc_losses.append(loss_item)
+                    wandb.log(
+                        {
+                            "ce_pair_loss": ce_loss.item(),
+                            "margin_pair_loss": margin_loss.item(),
+                            "total_pair_loss": loss_item,
+                        }
+                    )
 
                     epoch_steps_counter += 1
                     total_steps_counter += 1
 
-                    current_loss = sum(doc_losses) / len(doc_losses)
-                    epoch_bar.set_description(f"Current Loss {current_loss:.3f}")
-
-            # save model after every steps_save_interval steps
-            if (total_steps_counter % steps_save_interal) == 0:
-                model_save_dir_path = os.path.join(
-                    model_save_path, f"epoch-{epoch}_totalsteps-{total_steps_counter}"
+                wandb.log(
+                    {"avg_total_document_loss": sum(doc_losses) / len(doc_losses)}
                 )
-                pathlib.Path(model_save_dir_path).mkdir(parents=True, exist_ok=True)
-                self.model.save_pretrained(model_save_dir_path)
+
+                # save model after every steps_save_interval steps
+                if (total_steps_counter % steps_save_interal) == 0:
+                    print(f'snapshotting model after {total_steps_counter} steps')
+                    model_save_dir_path = os.path.join(
+                        model_save_path, f"epoch-{epoch}_totalsteps-{total_steps_counter}"
+                    )
+                    pathlib.Path(model_save_dir_path).mkdir(parents=True, exist_ok=True)
+                    self.model.save_pretrained(model_save_dir_path)
 
             print(f"Epoch {epoch}")
             print(f"Epoch time {time.perf_counter() - start_time}")
-            print(f"Train epoch loss {epoch_loss / epoch_steps_counter}")
+
+            avg_total_pair_loss_over_epoch = epoch_loss / epoch_steps_counter
+            wandb.log(
+                {"avg_total_pair_loss_over_epoch": avg_total_pair_loss_over_epoch}
+            )
+            print(f"Train epoch loss {avg_total_pair_loss_over_epoch}")
 
         print("saving one last snapshot")
         model_save_dir_path = os.path.join(
@@ -153,7 +169,7 @@ class CorrectionModel:
         Return the candidate summaries ranked according to faithfulness
         """
 
-        stanza.download('en')
+        stanza.download("en")
         nlp = stanza.Pipeline("en")
 
         src_doc = nlp(source)
