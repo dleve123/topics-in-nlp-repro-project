@@ -5,7 +5,7 @@ from transformers import BartTokenizer, BartForSequenceClassification
 import torch
 from torch.utils.data import DataLoader
 from torch import Tensor, nn
-from torch.optim import Adam
+from transformers.optimization import AdamW
 import time
 from preprocessing.make_entity_perturbations import make_perturbations
 import stanza
@@ -64,7 +64,11 @@ class CorrectionModel:
         self.model.train()
         wandb.watch(self.model)
 
-        optim = Adam(self.model.parameters(), lr=learning_rate)
+        optim = AdamW(
+            self.model.parameters(), 
+            lr=learning_rate,
+            correct_bias=False
+        )
 
         cross_entropy_loss_function = nn.CrossEntropyLoss()
         margin_loss_function = nn.MarginRankingLoss(margin=0)
