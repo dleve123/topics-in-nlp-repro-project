@@ -68,12 +68,12 @@ class CorrectionModel:
         margin_loss_function = nn.MarginRankingLoss(margin=0)
 
         epoch_data_iterator = DataLoader(dset, batch_size=1, shuffle=True)
+        total_steps_counter = 0
 
         for epoch in range(epochs):
             start_time = time.perf_counter()
             epoch_loss = 0
             epoch_steps_counter = 0
-            total_steps_counter = 0
 
             epoch_bar = tqdm(epoch_data_iterator)
 
@@ -126,7 +126,6 @@ class CorrectionModel:
 
             # save model after every steps_save_interval steps
             if (total_steps_counter % steps_save_interal) == 0:
-                print("Taking model snapshot")
                 model_save_dir_path = os.path.join(
                     model_save_path, f"epoch-{epoch}_totalsteps-{total_steps_counter}"
                 )
