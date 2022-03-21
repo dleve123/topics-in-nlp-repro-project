@@ -26,7 +26,7 @@ def eval_pair_positive_heigher(
             ):
                 document_examples = document_examples[: (max_num_pairs_per_doc + 1)]
 
-            for contrastive_pair in model.create_batches_of_pairs(document_examples):
+            for contrastive_pair in model.create_pairs(document_examples):
                 logits = model(contrastive_pair.to(model.device)).logits
                 more_faithful_idx = logits[:, 1].argmax()
 
