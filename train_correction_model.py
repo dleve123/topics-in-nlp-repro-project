@@ -35,9 +35,15 @@ if __name__ == "__main__":
         help="gradient step interval to trigger saving",
         default=200,
     )
+    parser.add_argument(
+        "--run_name",
+        type=str,
+        help="Name of run for weights and biases",
+    )
     args = parser.parse_args()
 
     run = wandb.init(project="correction-repro", entity="danton-nlp")
+    run.name = args.run_name
     config = wandb.config
     config.update(args)
 
