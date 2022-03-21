@@ -185,6 +185,20 @@ class CorrectionModel:
 
         return summaries, loss, logits
 
+    def batch_inference(
+        self, 
+        dset: List
+    ):
+        data_iterator = DataLoader(dset, batch_size=1, shuffle=False)
+        prediction_logits = []
+
+        with torch.no_grad():
+            for document_examples in tqdm(data_iterator):
+                document_examples = document_examples.squeeze(0)
+                logits = self.model(document_examples.to(self.device)).logits
+                prediction_logits.append(logits.cpu())
+        
+        return prediction_logits
 
 if __name__ == "__main__":
     model = CorrectionModel()
