@@ -50,10 +50,8 @@ class CorrectionModel:
 
     def train(
         self,
-        model_to_train: BartForSequenceClassification,
         dset: List,
-        device: torch.cuda.Device,
-        save_path: str,
+        model_save_path: str,
         max_num_pairs_per_doc: Optional[int] = None,
         epochs: int = 3,
         learning_rate: float = 1e-5,
@@ -95,20 +93,20 @@ class CorrectionModel:
                 for contrastive_pair in self.create_pairs(document_examples):
                     optim.zero_grad()
 
-                    contrastive_pair = contrastive_pair.to(device)
+                    contrastive_pair = contrastive_pair.to(self.device)
 
-                    preds = model_to_train(contrastive_pair).logits
+                    preds = self.model(contrastive_pair).logits
 
                     # should tend towards 1
                     positive_faithful_pred = preds[0, 1].unsqueeze(0)
                     # should tend towards 0
                     negative_faithful_pred = preds[1, 1].unsqueeze(0)
 
-                    good_then_bad_labels = torch.LongTensor([1, 0]).to(device)
+                    good_then_bad_labels = torch.LongTensor([1, 0]).to(self.device)
                     ce_loss = cross_entropy_loss_function(preds, good_then_bad_labels)
 
                     # positive_faithful_pred - negative_faithful_pred should be > 0
-                    margin_target = torch.LongTensor([1]).to(device)
+                    margin_target = torch.LongTensor([1]).to(self.device)
                     margin_loss = margin_loss_function(
                         positive_faithful_pred, negative_faithful_pred, margin_target
                     )
@@ -131,22 +129,21 @@ class CorrectionModel:
             # save model after every steps_save_interval steps
             if (total_steps_counter % steps_save_interal) == 0:
                 model_save_dir_path = os.path.join(
-                    save_path, f"epoch-{epoch}_totalsteps-{total_steps_counter}"
+                    model_save_path, f"epoch-{epoch}_totalsteps-{total_steps_counter}"
                 )
                 pathlib.Path(model_save_dir_path).mkdir(parents=True, exist_ok=True)
-                model.save_pretrained(model_save_dir_path)
+                self.model.save_pretrained(model_save_dir_path)
 
             print(f"Epoch {epoch}")
             print(f"Epoch time {time.perf_counter() - start_time}")
             print(f"Train epoch loss {epoch_loss / epoch_steps_counter}")
 
-        print("TRAINING COMPLETE!!!")
         print("saving one last snapshot")
         model_save_dir_path = os.path.join(
-            save_path, f"final-epoch-{epoch}_totalsteps-{total_steps_counter}"
+            model_save_path, f"final-epoch-{epoch}_totalsteps-{total_steps_counter}"
         )
         pathlib.Path(model_save_dir_path).mkdir(parents=True, exist_ok=True)
-        model.save_pretrained(model_save_dir_path)
+        self.model.save_pretrained(model_save_dir_path)
 
         return None
 
