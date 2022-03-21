@@ -50,20 +50,21 @@ def tokenize_data_batch(tokenizer: BartTokenizer, data: List[dict]) -> List[List
 
     List instead of Tensor as we write the tokenized data to a file.
     """
-    tokenized = []
+    tokenized_documents = []
     for doc in tqdm(data):
         positive_example = doc["positive_examples"]
         negative_examples = doc["negative_examples"]
-        all_examples =  positive_example + negative_examples
-        tokenized.append(tokenizer(
+        all_examples = positive_example + negative_examples
+        tokenized = tokenizer(
             all_examples,
             text_pair=[doc["source_text"]] * len(all_examples),
             truncation='only_second',
-            padding='max_length',
+            padding=True,
             max_length=tokenizer.model_max_length,
-        )['input_ids'])
+        )['input_ids']
+        tokenized_documents.append(tokenized)
 
-    return tokenized
+    return tokenized_documents
 
 
 def tensors_from_jsonl_filepath(data_filepath: str) -> List[torch.LongTensor]:
