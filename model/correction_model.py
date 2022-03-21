@@ -11,8 +11,8 @@ from preprocessing.make_entity_perturbations import make_perturbations
 import stanza
 from tqdm import tqdm
 
-#stanza.download('en')
-nlp = stanza.Pipeline('en')
+# stanza.download('en')
+nlp = stanza.Pipeline("en")
 
 # From the paper
 """
@@ -22,12 +22,12 @@ layer over the max pooled embedding, and the classification
 model is expected to output a label between ["FAITHFUL", "HALLUCINATED"].
 """
 
+
 class CorrectionModel:
     def __init__(self, model_checkpoint="facebook/bart-base"):
         self.tokenizer = BartTokenizer.from_pretrained(model_checkpoint)
         self.model = BartForSequenceClassification.from_pretrained(
-            model_checkpoint,
-            num_labels=2
+            model_checkpoint, num_labels=2
         )
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -57,15 +57,16 @@ class CorrectionModel:
         max_num_pairs_per_doc: Optional[int] = None,
         epochs: int = 3,
         learning_rate: float = 1e-5,
-        steps_save_interal: int = 200
+        steps_save_interal: int = 200,
     ) -> None:
         """
-        Trains `model_to_train`.
+        Trains CorrectionModel using a CE loss and MarginRankLoss.
+        Snapshots the model every `steps_save_interval`
         """
 
         self.model.train()
 
-        optim = Adam(self.model.parameters(),lr=learning_rate)
+        optim = Adam(self.model.parameters(), lr=learning_rate)
 
         cross_entropy_loss_function = nn.CrossEntropyLoss()
         margin_loss_function = nn.MarginRankingLoss(margin=0)
@@ -86,8 +87,10 @@ class CorrectionModel:
                 # Remove the batch dim to iterate over number of examples per batch (2)
                 document_examples = document_examples.squeeze(0)
 
-                if max_num_pairs_per_doc and document_examples.size(0) > (max_num_pairs_per_doc + 1):
-                    document_examples = document_examples[:(max_num_pairs_per_doc + 1)]
+                if max_num_pairs_per_doc and document_examples.size(0) > (
+                    max_num_pairs_per_doc + 1
+                ):
+                    document_examples = document_examples[: (max_num_pairs_per_doc + 1)]
 
                 for contrastive_pair in self.create_pairs(document_examples):
                     optim.zero_grad()
@@ -95,17 +98,19 @@ class CorrectionModel:
                     contrastive_pair = contrastive_pair.to(device)
 
                     preds = model_to_train(contrastive_pair).logits
-                    positive_faithful_pred = preds[0, 1].unsqueeze(0) # should tend towards 1
-                    negative_faithful_pred = preds[1, 1].unsqueeze(0) # should tend towards 0
+
+                    # should tend towards 1
+                    positive_faithful_pred = preds[0, 1].unsqueeze(0)
+                    # should tend towards 0
+                    negative_faithful_pred = preds[1, 1].unsqueeze(0)
 
                     good_then_bad_labels = torch.LongTensor([1, 0]).to(device)
                     ce_loss = cross_entropy_loss_function(preds, good_then_bad_labels)
 
-                    margin_target = torch.LongTensor([1]).to(device) # positive_faithful_pred - negative_faithful_pred should be > 0
+                    # positive_faithful_pred - negative_faithful_pred should be > 0
+                    margin_target = torch.LongTensor([1]).to(device)
                     margin_loss = margin_loss_function(
-                        positive_faithful_pred,
-                        negative_faithful_pred,
-                        margin_target
+                        positive_faithful_pred, negative_faithful_pred, margin_target
                     )
 
                     loss = ce_loss + margin_loss
@@ -123,10 +128,11 @@ class CorrectionModel:
                     current_loss = sum(doc_losses) / len(doc_losses)
                     epoch_bar.set_description(f"Current Loss {current_loss:.3f}")
 
-
             # save model after every steps_save_interval steps
             if (total_steps_counter % steps_save_interal) == 0:
-                model_save_dir_path = os.path.join(save_path, f"epoch-{epoch}_totalsteps-{total_steps_counter}")
+                model_save_dir_path = os.path.join(
+                    save_path, f"epoch-{epoch}_totalsteps-{total_steps_counter}"
+                )
                 pathlib.Path(model_save_dir_path).mkdir(parents=True, exist_ok=True)
                 model.save_pretrained(model_save_dir_path)
 
@@ -136,7 +142,9 @@ class CorrectionModel:
 
         print("TRAINING COMPLETE!!!")
         print("saving one last snapshot")
-        model_save_dir_path = os.path.join(save_path, f"final-epoch-{epoch}_totalsteps-{total_steps_counter}")
+        model_save_dir_path = os.path.join(
+            save_path, f"final-epoch-{epoch}_totalsteps-{total_steps_counter}"
+        )
         pathlib.Path(model_save_dir_path).mkdir(parents=True, exist_ok=True)
         model.save_pretrained(model_save_dir_path)
 
@@ -144,10 +152,10 @@ class CorrectionModel:
 
     def correct_summary(self, source, generated_summary):
         """
-            Given a source doc and generated summary,
-            generate candidate summaries and rank the candidates.
+        Given a source doc and generated summary,
+        generate candidate summaries and rank the candidates.
 
-            Return the candidate summaries ranked according to faithfulness
+        Return the candidate summaries ranked according to faithfulness
         """
 
         src_doc = nlp(source)
@@ -161,15 +169,15 @@ class CorrectionModel:
             target_ents=tgt_doc.ents,
             source_ents=src_doc.ents,
             is_training_mode=False,
-            max_perturbation_per_example=10
+            max_perturbation_per_example=10,
         )
         summaries = [generated_summary] + candidate_summaries
         inputs = self.tokenizer(
             summaries,
             text_pair=[src_doc._text] * len(summaries),
-            truncation='only_second',
+            truncation="only_second",
             return_tensors="pt",
-            padding=True
+            padding=True,
         )
         outputs = self.model(**inputs)
         loss = outputs.loss
@@ -178,6 +186,7 @@ class CorrectionModel:
         # TODO: order summary according to their likelihood of being faithful
 
         return summaries, loss, logits
+
 
 if __name__ == "__main__":
     model = CorrectionModel()
@@ -191,7 +200,4 @@ increasing pressures involving food, energy and water"""
     summary = """\
 The United Nations Secretary-General Ban Ki-moon was elected \
 for a second term in 21 June 2011."""
-    summaries, loss, logits = model.correct_summary(
-        source,
-        summary
-    )
+    summaries, loss, logits = model.correct_summary(source, summary)
