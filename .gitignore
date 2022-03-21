@@ -2,3 +2,4 @@ data/*
 evaluation/bart_qg
 evaluation/qa_models
 __pycache__
+.DS_Store
