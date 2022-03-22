@@ -26,7 +26,7 @@ if __name__ == "__main__":
         "--warmup", type=float, help="warmup steps as a proportion of training set size", default=0.1
     )
     parser.add_argument(
-        "--negative_examples_per_batch", type=int, help="number of negative examples per batch", default=2
+        "--negative_examples_per_batch", type=int, help="number of negative examples per batch", default=1
     )
     parser.add_argument(
         "--max_num_pairs_per_doc",
