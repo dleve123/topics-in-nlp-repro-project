@@ -23,6 +23,12 @@ if __name__ == "__main__":
         "--learning_rate", type=float, help="training learning rate", default=1e-5
     )
     parser.add_argument(
+        "--warmup", type=float, help="warmup steps as a proportion of training set size", default=0.1
+    )
+    parser.add_argument(
+        "--negative_examples_per_batch", type=int, help="number of negative examples per batch", default=2
+    )
+    parser.add_argument(
         "--max_num_pairs_per_doc",
         type=int,
         help="Limit of the number of contrastive pairs to train on per doc."
@@ -59,7 +65,9 @@ if __name__ == "__main__":
         max_num_pairs_per_doc=args.max_num_pairs_per_doc,
         epochs=args.epochs,
         learning_rate=args.learning_rate,
-        steps_save_interal=args.steps_save_interval,
+        batch_save_interal=args.steps_save_interval,
+        negative_examples_per_batch=args.negative_examples_per_batch,
+        warmup=args.warmup
     )
 
     print("-- Training Ending --")

@@ -5,7 +5,7 @@ from transformers import BartTokenizer, BartForSequenceClassification
 import torch
 from torch.utils.data import DataLoader
 from torch import Tensor, nn
-from torch.optim import Adam
+from transformers.optimization import AdamW, get_linear_schedule_with_warmup
 import time
 from preprocessing.make_entity_perturbations import make_perturbations
 import stanza
@@ -30,7 +30,7 @@ class CorrectionModel:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model.to(self.device)
 
-    def create_pairs(self, document_examples: Tensor) -> List[Tensor]:
+    def create_pairs(self, document_examples: Tensor, negative_examples_per_batch: int) -> List[Tensor]:
         """
         Split a tensor of 1 positive and N negative pairs into
         a list of N elements, which each element being a Tensor with 2 rows:
@@ -42,8 +42,11 @@ class CorrectionModel:
         positive = document_examples[0]
         negatives = document_examples[1:]
 
-        for negative in negatives:
-            batches.append(torch.vstack((positive, negative)))
+        for i in range(0, negatives.shape[0], negative_examples_per_batch):
+            batches.append(torch.vstack([
+                positive, 
+                negatives[i:i + negative_examples_per_batch]
+            ]))
 
         return batches
 
@@ -54,7 +57,9 @@ class CorrectionModel:
         max_num_pairs_per_doc: Optional[int] = None,
         epochs: int = 3,
         learning_rate: float = 1e-5,
-        steps_save_interal: int = 200,
+        batch_save_interval: int = 200,
+        warmup=0.1,
+        negative_examples_per_batch=1
     ) -> None:
         """
         Trains CorrectionModel using a CE loss and MarginRankLoss.
@@ -63,14 +68,24 @@ class CorrectionModel:
 
         self.model.train()
         wandb.watch(self.model)
+        epoch_data_iterator = DataLoader(dset, batch_size=1, shuffle=True)
 
-        optim = Adam(self.model.parameters(), lr=learning_rate)
+        optim = AdamW(
+            self.model.parameters(), 
+            lr=learning_rate,
+            correct_bias=False
+        )
+        scheduler = get_linear_schedule_with_warmup(
+            optim,
+            num_warmup_steps=warmup * len(epoch_data_iterator),
+            num_training_steps=len(epoch_data_iterator) * 10 / (negative_examples_per_batch + 1)
+        )
 
         cross_entropy_loss_function = nn.CrossEntropyLoss()
         margin_loss_function = nn.MarginRankingLoss(margin=0)
 
-        epoch_data_iterator = DataLoader(dset, batch_size=1, shuffle=True)
         total_steps_counter = 0
+        total_batch_counter = 0
 
         for epoch in range(epochs):
             start_time = time.perf_counter()
@@ -90,31 +105,40 @@ class CorrectionModel:
                 ):
                     document_examples = document_examples[: (max_num_pairs_per_doc + 1)]
 
-                for contrastive_pair in self.create_pairs(document_examples):
+                for contrastive_batch in self.create_pairs(document_examples, negative_examples_per_batch):
                     optim.zero_grad()
 
-                    contrastive_pair = contrastive_pair.to(self.device)
+                    contrastive_batch = contrastive_batch.to(self.device)
 
-                    preds = self.model(contrastive_pair).logits
+                    preds = self.model(contrastive_batch).logits
 
-                    # should tend towards 1
-                    positive_faithful_pred = preds[0, 1].unsqueeze(0)
+                    n_negative = contrastive_batch.shape[0] - 1
+
                     # should tend towards 0
-                    negative_faithful_pred = preds[1, 1].unsqueeze(0)
+                    negative_faithful_pred = preds[1:, 1]
+                    # should tend towards 1
+                    positive_faithful_pred = preds[0, 1].repeat(n_negative)
 
-                    good_then_bad_labels = torch.LongTensor([1, 0]).to(self.device)
+                    # firts is positive, rest are negative
+                    good_then_bad_labels = torch.LongTensor(
+                        [1] + ([0] * n_negative)
+                    ).to(self.device)
+
                     ce_loss = cross_entropy_loss_function(preds, good_then_bad_labels)
 
                     # positive_faithful_pred - negative_faithful_pred should be > 0
-                    margin_target = torch.LongTensor([1]).to(self.device)
+                    margin_target = torch.LongTensor([1] * n_negative).to(self.device)
                     margin_loss = margin_loss_function(
-                        positive_faithful_pred, negative_faithful_pred, margin_target
+                        positive_faithful_pred, 
+                        negative_faithful_pred, 
+                        margin_target
                     )
 
                     loss = ce_loss + margin_loss
                     loss.backward()
 
                     optim.step()
+                    scheduler.step()
 
                     loss_item = loss.item()
                     epoch_loss += loss_item
@@ -124,6 +148,7 @@ class CorrectionModel:
                             "ce_pair_loss": ce_loss.item(),
                             "margin_pair_loss": margin_loss.item(),
                             "total_pair_loss": loss_item,
+                            "learning_rate": scheduler.get_last_lr()[-1]
                         }
                     )
 
@@ -133,10 +158,11 @@ class CorrectionModel:
                 wandb.log(
                     {"avg_total_document_loss": sum(doc_losses) / len(doc_losses)}
                 )
+                total_batch_counter += 1
 
-                # save model after every steps_save_interval steps
-                if (total_steps_counter % steps_save_interal) == 0:
-                    print(f'snapshotting model after {total_steps_counter} steps')
+                # save model after every batch_save_interval batches
+                if (total_batch_counter % batch_save_interval) == 0:
+                    print(f'snapshotting model after {total_batch_counter} batches')
                     model_save_dir_path = os.path.join(
                         model_save_path, f"epoch-{epoch}_totalsteps-{total_steps_counter}"
                     )
