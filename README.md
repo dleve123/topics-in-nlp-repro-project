@@ -9,10 +9,15 @@ on building a correction model.
 
 At a high-level, the paper:
 
-1. Generates summaries of Xsum train using BART-Large.
-2. Generates artificial "negative" examples of these generated summaries using NER swapping.
-3. Fine-tunes BART-Base to discriminate between correct and incorrect summaries.
-4. Against the Xsum test set:
+1. Reproduce Rouge-L and BERT-score for BART-Large baseline for Xsum test:
+    - code: [generate_bart_baseline.py](https://github.com/dleve123/topics-in-nlp-repro-project/blob/main/scripts/generate_bart_baseline.py) and [eval_bert_score.py](https://github.com/dleve123/topics-in-nlp-repro-project/blob/main/eval_bert_score.py)
+    - stored data: [facebook-bart-large-xsum-metrics.json](https://github.com/dleve123/topics-in-nlp-repro-project/blob/main/data/xsum/facebook-bart-large-xsum-metrics.json)
+3. Tokenize Xsum train for BART as a pre-processing step
+    - code: [bart_tokenize.py](https://github.com/dleve123/topics-in-nlp-repro-project/blob/main/bart_tokenize.py)
+4. Generates summaries of Xsum train using BART-Large.
+5. Generates artificial "negative" examples of these generated summaries using NER swapping.
+6. Fine-tunes BART-Base to discriminate between correct and incorrect summaries.
+7. Against the Xsum test set:
     1. Evaluates BERT score and ROUGE-L score between the summary selected as most correct by the
    discriminative model and the ground-truth human-created summary.
    2. Evaluates the FEQA score (measure of semantic correctness) of the selected summary given the source document.
