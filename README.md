@@ -2,12 +2,35 @@
 
 Paper: https://arxiv.org/pdf/2104.09061.pdf
 
+## Introduction
+
 The goal of this project is to reproduce Table 3 of Chen et al's paper
 on building a correction model.
 
+At a high-level, the paper:
 
-Python version: 3.9
+1. Generates summaries of Xsum train using BART-Large.
+2. Generates artificial "negative" examples of these generated summaries using NER swapping.
+3. Fine-tunes BART-Base to discriminate between correct and incorrect summaries.
+4. Against the Xsum test set:
+    1. Evaluates BERT score and ROUGE-L score between the summary selected as most correct by the
+   discriminative model and the ground-truth human-created summary.
+   2. Evaluates the FEQA score (measure of semantic correctness) of the selected summary given the source document.
 
+## Methods
+
+In order to replicate Table 3, we complete the following tasks:
+
+1. Generate summaries and compute ROUGE-L and BERT score for Xsum test using a BART-Large model fine-tuned on Xsum.
+2. Train a discrimative Correction model (from BART-Base) on Xsum train from generated negative and given positive examples.
+4. Evaluate trained Correction model on Xsum test.
+
+## Replication
+
+
+### Results
+- We replicate the trends in the paper (higher FEQA score from correction model)
+- We compute FEQA for a subset of the changed summaries due to computational constraints
 ## Data Preprocessing
 
 For efficiency, we tokenize the datasets in advance of training.
