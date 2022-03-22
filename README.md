@@ -25,12 +25,18 @@ In order to replicate Table 3, we complete the following tasks:
 2. Train a discrimative Correction model (from BART-Base) on Xsum train from generated negative and given positive examples.
 4. Evaluate trained Correction model on Xsum test.
 
+### Original table
+![Screenshot 2022-03-22 at 13 01 55](https://user-images.githubusercontent.com/1349225/159535087-48116051-f951-41ac-92fb-ef1f1c12c6d1.png)
+
+
 ## Replication
 ![Screenshot 2022-03-22 at 12 59 22](https://user-images.githubusercontent.com/1349225/159534666-a8a6dbe2-dc15-4d43-93f6-e794aca8819f.png)
 
-### Results
-- We replicate the trends in the paper (higher FEQA score from correction model)
-- We compute FEQA for a subset of the changed summaries due to computational constraints
+We replicate the trends in the paper successfully. There are some differences due to:
+- we compute FEQA for a subset of the changed summaries due to computational constraints
+- BERT fine-tuning instability
+
+
 ## Data Preprocessing
 
 For efficiency, we tokenize the datasets in advance of training.
