@@ -30,7 +30,7 @@ class CorrectionModel:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model.to(self.device)
 
-    def create_pairs(self, document_examples: Tensor) -> List[Tensor]:
+    def create_pairs(self, document_examples: Tensor, negative_examples_per_batch: int) -> List[Tensor]:
         """
         Split a tensor of 1 positive and N negative pairs into
         a list of N elements, which each element being a Tensor with 2 rows:
@@ -42,8 +42,11 @@ class CorrectionModel:
         positive = document_examples[0]
         negatives = document_examples[1:]
 
-        for negative in negatives:
-            batches.append(torch.vstack((positive, negative)))
+        for i in range(0, negatives.shape[0], negative_examples_per_batch):
+            batches.append(torch.vstack([
+                positive, 
+                negatives[i:i + negative_examples_per_batch]
+            ]))
 
         return batches
 
@@ -56,7 +59,7 @@ class CorrectionModel:
         learning_rate: float = 1e-5,
         steps_save_interal: int = 200,
         warmup=0.1,
-        batch_size=2
+        negative_examples_per_batch=1
     ) -> None:
         """
         Trains CorrectionModel using a CE loss and MarginRankLoss.
@@ -75,7 +78,7 @@ class CorrectionModel:
         scheduler = get_linear_schedule_with_warmup(
             optim,
             num_warmup_steps=warmup * len(epoch_data_iterator),
-            num_training_steps=len(epoch_data_iterator) * 10 / batch_size
+            num_training_steps=len(epoch_data_iterator) * 10 / (negative_examples_per_batch + 1)
         )
 
         cross_entropy_loss_function = nn.CrossEntropyLoss()
@@ -101,19 +104,25 @@ class CorrectionModel:
                 ):
                     document_examples = document_examples[: (max_num_pairs_per_doc + 1)]
 
-                for contrastive_pair in self.create_pairs(document_examples):
+                for contrastive_batch in self.create_pairs(document_examples, negative_examples_per_batch):
                     optim.zero_grad()
 
-                    contrastive_pair = contrastive_pair.to(self.device)
+                    contrastive_batch = contrastive_batch.to(self.device)
 
-                    preds = self.model(contrastive_pair).logits
+                    preds = self.model(contrastive_batch).logits
 
-                    # should tend towards 1
-                    positive_faithful_pred = preds[0, 1].unsqueeze(0)
+                    n_negative = contrastive_batch.shape[0] - 1
+
                     # should tend towards 0
-                    negative_faithful_pred = preds[1, 1].unsqueeze(0)
+                    negative_faithful_pred = preds[1:, 1]
+                    # should tend towards 1
+                    positive_faithful_pred = preds[0, 1].repeat(n_negative)
 
-                    good_then_bad_labels = torch.LongTensor([1, 0]).to(self.device)
+                    # firts is positive, rest are negative
+                    good_then_bad_labels = torch.LongTensor(
+                        [1] + ([0] * n_negative)
+                    ).to(self.device)
+
                     ce_loss = cross_entropy_loss_function(preds, good_then_bad_labels)
 
                     # positive_faithful_pred - negative_faithful_pred should be > 0
