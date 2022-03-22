@@ -65,7 +65,7 @@ if __name__ == "__main__":
         max_num_pairs_per_doc=args.max_num_pairs_per_doc,
         epochs=args.epochs,
         learning_rate=args.learning_rate,
-        steps_save_interal=args.steps_save_interval,
+        batch_save_interal=args.steps_save_interval,
         negative_examples_per_batch=args.negative_examples_per_batch,
         warmup=args.warmup
     )

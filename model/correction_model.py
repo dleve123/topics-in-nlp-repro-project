@@ -57,7 +57,7 @@ class CorrectionModel:
         max_num_pairs_per_doc: Optional[int] = None,
         epochs: int = 3,
         learning_rate: float = 1e-5,
-        steps_save_interal: int = 200,
+        batch_save_interval: int = 200,
         warmup=0.1,
         negative_examples_per_batch=1
     ) -> None:
@@ -85,6 +85,7 @@ class CorrectionModel:
         margin_loss_function = nn.MarginRankingLoss(margin=0)
 
         total_steps_counter = 0
+        total_batch_counter = 0
 
         for epoch in range(epochs):
             start_time = time.perf_counter()
@@ -155,10 +156,11 @@ class CorrectionModel:
                 wandb.log(
                     {"avg_total_document_loss": sum(doc_losses) / len(doc_losses)}
                 )
+                total_batch_counter += 1
 
-                # save model after every steps_save_interval steps
-                if (total_steps_counter % steps_save_interal) == 0:
-                    print(f'snapshotting model after {total_steps_counter} steps')
+                # save model after every batch_save_interval batches
+                if (total_batch_counter % batch_save_interval) == 0:
+                    print(f'snapshotting model after {total_batch_counter} batches')
                     model_save_dir_path = os.path.join(
                         model_save_path, f"epoch-{epoch}_totalsteps-{total_steps_counter}"
                     )
