@@ -36,9 +36,13 @@ We replicate the trends in the paper successfully. There are some differences du
 - we compute FEQA for a subset of the changed summaries due to computational constraints
 - BERT fine-tuning instability
 
+## Training logs
+![Screenshot 2022-03-22 at 13 14 47](https://user-images.githubusercontent.com/1349225/159537740-f2ce17eb-69fe-46d9-8ae6-575dfc5fdf1c.png)
+![Screenshot 2022-03-22 at 13 14 08](https://user-images.githubusercontent.com/1349225/159537741-d8265e37-6b44-4fcb-95c3-9e4d8ec43f09.png)
+![Screenshot 2022-03-22 at 13 13 42](https://user-images.githubusercontent.com/1349225/159537744-26741168-2ac4-490e-8d52-d5a23bd8820a.png)
+
 
 ## Data Preprocessing
-
 For efficiency, we tokenize the datasets in advance of training.
 
 ```bash
