@@ -26,7 +26,7 @@ In order to replicate Table 3, we complete the following tasks:
 4. Evaluate trained Correction model on Xsum test.
 
 ## Replication
-
+![Screenshot 2022-03-22 at 12 59 22](https://user-images.githubusercontent.com/1349225/159534666-a8a6dbe2-dc15-4d43-93f6-e794aca8819f.png)
 
 ### Results
 - We replicate the trends in the paper (higher FEQA score from correction model)
