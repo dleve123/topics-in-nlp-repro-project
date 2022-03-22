@@ -127,9 +127,11 @@ class CorrectionModel:
                     ce_loss = cross_entropy_loss_function(preds, good_then_bad_labels)
 
                     # positive_faithful_pred - negative_faithful_pred should be > 0
-                    margin_target = torch.LongTensor([1]).to(self.device)
+                    margin_target = torch.LongTensor([1] * n_negative).to(self.device)
                     margin_loss = margin_loss_function(
-                        positive_faithful_pred, negative_faithful_pred, margin_target
+                        positive_faithful_pred, 
+                        negative_faithful_pred, 
+                        margin_target
                     )
 
                     loss = ce_loss + margin_loss
