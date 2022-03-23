@@ -1,9 +1,8 @@
 # Replication Project - Contrast Candidate Generation and Selection
-The goal of this project is to reproduce Table 3 of Chen et al's paper which introduces a model for correcting summary hallucinations.
+The goal of this project is to reproduce Table 3 of [Chen et al's paper](https://arxiv.org/pdf/2104.09061.pdf) which introduces a model for correcting summary hallucinations.
 
 ![Screenshot 2022-03-22 at 13 01 55](https://user-images.githubusercontent.com/1349225/159535087-48116051-f951-41ac-92fb-ef1f1c12c6d1.png)
 
-- [Paper on arXiv](https://arxiv.org/pdf/2104.09061.pdf)
 - [Paper Presentation for CS6741](https://docs.google.com/presentation/d/1O3qgO7NvnJ1jZbE_-lZDYVkpRgSA8NszTTgdVkUKy3U/edit#slide=id.p)
 
 ## Introduction
