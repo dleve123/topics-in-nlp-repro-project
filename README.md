@@ -43,18 +43,18 @@ We compute BERT-score, RougeL and FEQA scores for two sets of summaries:
 - baseline generated summaries 
 - corrected baseline generated summaries 
 
-Code: 
-- [BERT score util](eval_bert_score.py)
-- [FEQA score util](eval_feqa.py)
-- [Evaluation notebook with FEQA-score caching](evaluate_correction_model.ipynb)
+**Code:**
+- [Evaluation notebook for FEQA-score (with caching)](evaluate_correction_model_feqa.ipynb)
+- [Evaluation notebook for BERT & rouge-scores](evaluate_rouge_bert_score.ipynb)
 
 ## Results
 
-### Original table
+### Original Table
 ![Screenshot 2022-03-22 at 13 01 55](https://user-images.githubusercontent.com/1349225/159535087-48116051-f951-41ac-92fb-ef1f1c12c6d1.png)
 
-### Replication
-![Screenshot 2022-03-22 at 12 59 22](https://user-images.githubusercontent.com/1349225/159534666-a8a6dbe2-dc15-4d43-93f6-e794aca8819f.png)
+### Our Replication
+![Screenshot 2022-03-22 at 22 25 54](https://user-images.githubusercontent.com/1349225/159611781-3d596d9f-6ae1-4c97-b67d-be1ccc385e97.png)
+
 
 We are able to replicate the evaluation trends from the paper successfully. Most notably, our trained correction model successfully improves the faithfulness of the baseline generated summaries as measured by the FEQA scores.
 
