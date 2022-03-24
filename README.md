@@ -13,7 +13,7 @@ At a high-level, the process can be broken down into two steps:
 1. **Candidate generation:** candidate summaries are created by replacing entities and quantities in summaries with entities of compatible semantic types from the source document. 
    - At training time, entities are replaced in the ground truth summary to create negative examples
    - At inference time, entities are replaced in the generated summary to create candidate summaries
-3. **Candidate selection:** a fine-tuned BART “faithfulness” classifier ranks the candidate summaries according to how faithful they are to the source document. The most faithful document is the suggested correction made my the model.
+3. **Candidate selection:** a fine-tuned BART “faithfulness” classifier ranks the candidate summaries according to how faithful they are to the source document. Within the set of candidate summaries, the most faithful summary as predicted by this classifier is the final output of the system. 
 
 ![Screenshot 2022-03-22 at 20 54 23](https://user-images.githubusercontent.com/1349225/159600671-a1cc97b3-61ea-4a9a-8215-7ae88ac5aa71.png)
 
