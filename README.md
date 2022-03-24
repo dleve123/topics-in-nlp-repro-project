@@ -7,10 +7,10 @@ The goal of this project is to reproduce Table 3 of [Chen et al's paper](https:/
 
 ## Introduction
 
-The authors present a method for correcting hallucinations in generated text summaries. They leverage a pre-trained BART-large model which is fine-tuned to discriminate between "faithful" and "unfaithful" summaries. The training data for fine-tuning is created by artificially corrupting ground truth summaries. 
+The authors present a method for correcting hallucinations in generated text summaries. They leverage a pre-trained BART-large model which is fine-tuned to discriminate between "faithful" and "unfaithful" summaries. The training data for fine-tuning is created by artificially corrupting ground truth (human created) summaries. 
 
 At a high-level, the process can be broken down into two steps:
-1. **Candidate generation:** candidate summaries are created by replacing entities and quantities in pre-determined summaries with entities of compatible semantic types from the source document. 
+1. **Candidate generation:** candidate summaries are created by replacing entities and quantities in summaries with entities of compatible semantic types from the source document. 
    - At training time, entities are replaced in the ground truth summary to create negative examples
    - At inference time, entities are replaced in the generated summary to create candidate summaries
 3. **Candidate selection:** a fine-tuned BART “faithfulness” classifier ranks the candidate summaries according to how faithful they are to the source document. The most faithful document is the suggested correction made my the model.
