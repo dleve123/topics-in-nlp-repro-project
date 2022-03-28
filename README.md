@@ -7,7 +7,7 @@ The goal of this project is to reproduce Table 3 of [Chen et al's paper](https:/
 
 ## Introduction
 
-The authors present a method for correcting hallucinations in generated text summaries. They leverage a pre-trained BART-large model which is fine-tuned to discriminate between "faithful" and "unfaithful" summaries. The training data for fine-tuning is created by artificially corrupting ground truth (human created) summaries. 
+The authors present a method for correcting hallucinations in generated text summaries. They leverage a pre-trained BART-Base model which is fine-tuned to discriminate between "faithful" and "unfaithful" summaries. The training data for fine-tuning is created by artificially corrupting ground truth (human created) summaries. 
 
 At a high-level, the process can be broken down into two steps:
 
